@@ -35,7 +35,7 @@ abstract class StateEvent<S extends State> extends State {
 
     if (nextState != null && nextState != this) {
       _onExit();
-      nextState._onExit();
+      nextState._onEntry();
     }
 
     return nextState;

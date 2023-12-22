@@ -24,8 +24,10 @@ sealed class MyState extends StateEvent<MyState> with EquatableMixin {
 class Paused extends MyState {
   @override
   final void Function()? exit;
+  @override
+  final void Function()? entry;
 
-  Paused({this.exit});
+  Paused({this.exit, this.entry});
 
   @override
   Map<Event, MyState> get events => {
@@ -35,6 +37,19 @@ class Paused extends MyState {
 
   @override
   String get id => "Paused";
+
+  @override
+  List<Object?> get props => [id];
+}
+
+class Stopped extends MyState {
+  @override
+  Map<Event, MyState> events;
+
+  Stopped(this.events);
+
+  @override
+  String get id => "Stopped";
 
   @override
   List<Object?> get props => [id];
@@ -79,6 +94,19 @@ void main() {
       final machine = Machine<MyState>(currentState: paused);
 
       machine.transition(event1);
+
+      expect(n, 1);
+    });
+
+    test('entry action', () {
+      int n = 0;
+      final event = CEvent('stp');
+
+      final paused = Paused(entry: () => n += 1);
+      final stopped = Stopped({event: paused});
+      final machine = Machine<MyState>(currentState: stopped);
+
+      machine.transition(event);
 
       expect(n, 1);
     });
