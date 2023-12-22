@@ -1,3 +1,5 @@
 library;
 
-export 'src/dart_state_chart_base.dart';
+export 'src/event.dart';
+export 'src/machine.dart';
+export 'src/state.dart';
