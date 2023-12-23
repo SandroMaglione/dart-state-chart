@@ -14,9 +14,9 @@ sealed class MyState extends StateEvent<Context, MyState> with EquatableMixin {
 
 class Paused extends MyState {
   @override
-  void Function(Context context)? entry;
+  Context? Function(Context context)? entry;
   @override
-  void Function(Context context)? exit;
+  Context? Function(Context context)? exit;
 
   Paused({this.entry, this.exit});
 
@@ -115,6 +115,29 @@ void main() {
       machine.transition(event1);
 
       expect(n, 10);
+    });
+
+    test('update on exit', () {
+      final paused = Paused(exit: (context) => context + 1);
+      final machine =
+          Machine<Context, MyState>(currentState: paused, context: 10);
+
+      machine.transition(event1);
+
+      expect(machine.context, 11);
+    });
+
+    test('update on entry', () {
+      final event = Event('stp');
+
+      final paused = Paused(entry: (context) => context + 1);
+      final stopped = Stopped({event: paused});
+      final machine =
+          Machine<Context, MyState>(currentState: stopped, context: 10);
+
+      machine.transition(event);
+
+      expect(machine.context, 11);
     });
   });
 }
