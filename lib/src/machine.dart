@@ -7,22 +7,19 @@ class Machine<Context, S extends StateEvent<Context, S>> {
   S currentState;
   Context context;
 
-  final _controller = StreamController<Context>();
+  final _controller = StreamController<(S, Context)>.broadcast();
 
-  Machine({required this.currentState, required this.context});
-
-  void transition(Event<Context> event) {
-    final (nextState, updateContext) = currentState.next(event, context);
-
-    if (nextState != null) {
-      currentState = nextState;
-    }
-
-    if (updateContext != null) {
-      context = updateContext;
-      _controller.sink.add(updateContext);
-    }
+  Machine({required this.currentState, required this.context}) {
+    subscribe.listen((event) {
+      currentState = event.$1;
+      context = event.$2;
+    });
   }
 
-  Stream<Context> get subscribe => _controller.stream;
+  Future<void> transition(Event<Context> event) async =>
+      _controller.sink.addStream(
+        currentState.next(event, currentState, context),
+      );
+
+  Stream<(S, Context)> get subscribe => _controller.stream;
 }
