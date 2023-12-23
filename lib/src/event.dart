@@ -1,4 +1,5 @@
-class Event {
+class Event<Context> {
   final String name;
-  const Event(this.name);
+  final Context? Function(Context context)? action;
+  const Event(this.name, {this.action});
 }

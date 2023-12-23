@@ -5,8 +5,8 @@ import 'package:test/test.dart';
 
 typedef Context = int;
 
-Event event1 = Event('event1');
-Event event2 = Event('event2');
+Event<Context> event1 = Event('event1');
+Event<Context> event2 = Event('event2');
 
 sealed class MyState extends StateEvent<Context, MyState> with EquatableMixin {
   String get id;
@@ -21,7 +21,7 @@ class Paused extends MyState {
   Paused({this.entry, this.exit});
 
   @override
-  Map<Event, MyState> get events => {
+  Map<Event<Context>, MyState> get events => {
         event1: Playing(),
         event2: this,
       };
@@ -35,7 +35,7 @@ class Paused extends MyState {
 
 class Stopped extends MyState {
   @override
-  Map<Event, MyState> events;
+  Map<Event<Context>, MyState> events;
 
   Stopped(this.events);
 
@@ -92,7 +92,7 @@ void main() {
 
     test('entry action', () {
       int n = 0;
-      final event = Event('stp');
+      final event = Event<Context>('stp');
 
       final paused = Paused(entry: (_) => n += 1);
       final stopped = Stopped({event: paused});
@@ -128,9 +128,37 @@ void main() {
     });
 
     test('update on entry', () {
-      final event = Event('stp');
+      final event = Event<Context>('stp');
 
       final paused = Paused(entry: (context) => context + 1);
+      final stopped = Stopped({event: paused});
+      final machine =
+          Machine<Context, MyState>(currentState: stopped, context: 10);
+
+      machine.transition(event);
+
+      expect(machine.context, 11);
+    });
+  });
+
+  group('event action', () {
+    test('read', () {
+      int n = 0;
+
+      final event = Event<Context>('some', action: (context) => n = context);
+      final paused = Paused();
+      final stopped = Stopped({event: paused});
+      final machine =
+          Machine<Context, MyState>(currentState: stopped, context: 10);
+
+      machine.transition(event);
+
+      expect(n, 10);
+    });
+
+    test('update action', () {
+      final event = Event<Context>('some', action: (context) => context + 1);
+      final paused = Paused();
       final stopped = Stopped({event: paused});
       final machine =
           Machine<Context, MyState>(currentState: stopped, context: 10);

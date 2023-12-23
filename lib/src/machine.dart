@@ -7,7 +7,7 @@ class Machine<Context, S extends StateEvent<Context, S>> {
 
   Machine({required this.currentState, required this.context});
 
-  void transition(Event event) {
+  void transition(Event<Context> event) {
     final (nextState, updateContext) = currentState.next(event, context);
     if (nextState != null) currentState = nextState;
     if (updateContext != null) context = updateContext;

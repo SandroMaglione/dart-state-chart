@@ -16,14 +16,15 @@ abstract class StateEvent<Context, S extends State<Context>>
   @override
   Context? Function(Context context)? get exit => null;
 
-  Map<Event, S> get events => {};
+  Map<Event<Context>, S> get events => {};
 
-  (S?, Context?) next(Event event, Context context) {
+  (S?, Context?) next(Event<Context> event, Context context) {
     final nextState = events[event];
 
     if (nextState != null && nextState != this) {
       final exitContext = _onExit(context) ?? context;
-      final entryContext = nextState._onEntry(exitContext) ?? exitContext;
+      final actionContext = event.action?.call(exitContext) ?? exitContext;
+      final entryContext = nextState._onEntry(actionContext) ?? actionContext;
       return (nextState, entryContext);
     }
 
