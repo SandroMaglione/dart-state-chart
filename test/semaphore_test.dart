@@ -1,4 +1,5 @@
 import 'package:dart_state_chart/dart_state_chart.dart';
+import 'package:test/test.dart';
 
 typedef Context = ({int count});
 
@@ -30,4 +31,8 @@ final machine = Machine<Context, States>(
   context: (count: 0),
 );
 
-void main() {}
+void main() {
+  group('semaphore', () {
+    test('should switch from Green to Yellow', () {});
+  });
+}

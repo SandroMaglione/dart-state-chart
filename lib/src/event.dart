@@ -1,4 +1,4 @@
-abstract class Event {
-  const Event();
-  String get name;
+class Event {
+  final String name;
+  const Event(this.name);
 }

@@ -3,31 +3,22 @@ import 'package:equatable/equatable.dart';
 import 'package:mocktail/mocktail.dart';
 import 'package:test/test.dart';
 
-class CEvent extends Event with EquatableMixin {
-  @override
-  final String name;
+typedef Context = int;
 
-  const CEvent(this.name);
+Event event1 = Event('event1');
+Event event2 = Event('event2');
 
-  @override
-  List<Object?> get props => [name];
-}
-
-Event event1 = CEvent('event1');
-Event event2 = CEvent('event2');
-
-/// Make it `sealed` to have a finite number of states
-sealed class MyState extends StateEvent<MyState> with EquatableMixin {
+sealed class MyState extends StateEvent<Context, MyState> with EquatableMixin {
   String get id;
 }
 
 class Paused extends MyState {
   @override
-  final void Function()? exit;
+  void Function(Context context)? entry;
   @override
-  final void Function()? entry;
+  void Function(Context context)? exit;
 
-  Paused({this.exit, this.entry});
+  Paused({this.entry, this.exit});
 
   @override
   Map<Event, MyState> get events => {
@@ -63,35 +54,36 @@ class Playing extends MyState {
   List<Object?> get props => [id];
 }
 
-class MockPaused extends Mock implements Paused {}
-
-class MockMachine extends Mock implements Machine<MyState> {}
+class MockMachine extends Mock implements Machine<Context, MyState> {}
 
 void main() {
   group('transition', () {
     test('state to state', () {
-      final machine = Machine<MyState>(currentState: Paused());
+      final machine =
+          Machine<Context, MyState>(currentState: Paused(), context: 0);
 
-      final newMachine = machine.transition(event1);
+      machine.transition(event1);
 
-      expect(newMachine.currentState, Playing());
+      expect(machine.currentState, Playing());
     });
 
     test('self-transition', () {
       final paused = Paused();
-      final machine = Machine<MyState>(currentState: paused);
+      final machine =
+          Machine<Context, MyState>(currentState: paused, context: 0);
 
-      final newMachine = machine.transition(event2);
+      machine.transition(event2);
 
-      expect(newMachine.currentState, paused);
+      expect(machine.currentState, paused);
     });
   });
 
   group('entry/exit', () {
     test('exit action', () {
       int n = 0;
-      final paused = Paused(exit: () => n += 1);
-      final machine = Machine<MyState>(currentState: paused);
+      final paused = Paused(exit: (_) => n += 1);
+      final machine =
+          Machine<Context, MyState>(currentState: paused, context: 0);
 
       machine.transition(event1);
 
@@ -100,15 +92,29 @@ void main() {
 
     test('entry action', () {
       int n = 0;
-      final event = CEvent('stp');
+      final event = Event('stp');
 
-      final paused = Paused(entry: () => n += 1);
+      final paused = Paused(entry: (_) => n += 1);
       final stopped = Stopped({event: paused});
-      final machine = Machine<MyState>(currentState: stopped);
+      final machine =
+          Machine<Context, MyState>(currentState: stopped, context: 0);
 
       machine.transition(event);
 
       expect(n, 1);
+    });
+  });
+
+  group('context', () {
+    test('read', () {
+      int n = 0;
+      final paused = Paused(exit: (context) => n = context);
+      final machine =
+          Machine<Context, MyState>(currentState: paused, context: 10);
+
+      machine.transition(event1);
+
+      expect(n, 10);
     });
   });
 }

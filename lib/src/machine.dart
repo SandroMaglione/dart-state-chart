@@ -1,12 +1,12 @@
 import 'package:dart_state_chart/src/event.dart';
 import 'package:dart_state_chart/src/state.dart';
 
-class Machine<S extends StateEvent<S>> {
-  final S currentState;
+class Machine<Context, S extends StateEvent<Context, S>> {
+  S currentState;
+  Context context;
 
-  const Machine({required this.currentState});
+  Machine({required this.currentState, required this.context});
 
-  Machine<S> transition(Event event) => Machine<S>(
-        currentState: currentState.next(event) ?? currentState,
-      );
+  void transition(Event event) =>
+      currentState = currentState.next(event, context) ?? currentState;
 }
