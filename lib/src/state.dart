@@ -6,18 +6,10 @@ abstract class State {
   void Function()? get exit;
 
   // Don't override!
-  void _onEntry() {
-    if (entry != null) {
-      entry!();
-    }
-  }
+  void _onEntry() => entry?.call();
 
   // Don't override!
-  void _onExit() {
-    if (exit != null) {
-      exit!();
-    }
-  }
+  void _onExit() => exit?.call();
 }
 
 /// Adds typed event transitions to a state
