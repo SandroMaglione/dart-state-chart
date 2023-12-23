@@ -1,6 +1,5 @@
 import 'package:dart_state_chart/dart_state_chart.dart';
 import 'package:equatable/equatable.dart';
-import 'package:mocktail/mocktail.dart';
 import 'package:test/test.dart';
 
 typedef Context = int;
@@ -48,8 +47,6 @@ class Playing extends MyState {
   @override
   List<Object?> get props => [id];
 }
-
-class MockMachine extends Mock implements Machine<Context, MyState> {}
 
 void main() {
   group('transition', () {
@@ -161,6 +158,19 @@ void main() {
       machine.transition(event);
 
       expect(machine.context, 11);
+    });
+  });
+
+  group('stream', () {
+    test('subscribe', () {
+      final machine = Machine<Context, MyState>(
+        currentState: Paused()..exit = (context) => context + 1,
+        context: 0,
+      );
+
+      machine.transition(event1);
+
+      expectLater(machine.subscribe, emits(1));
     });
   });
 }
