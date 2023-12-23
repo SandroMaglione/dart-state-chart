@@ -13,12 +13,7 @@ sealed class MyState extends StateEvent<Context, MyState> with EquatableMixin {
 }
 
 class Paused extends MyState {
-  @override
-  Context? Function(Context context)? entry;
-  @override
-  Context? Function(Context context)? exit;
-
-  Paused({this.entry, this.exit});
+  Paused();
 
   @override
   Map<Event<Context>, MyState> get events => {
@@ -81,7 +76,7 @@ void main() {
   group('entry/exit', () {
     test('exit action', () {
       int n = 0;
-      final paused = Paused(exit: (_) => n += 1);
+      final paused = Paused()..exit = (_) => n += 1;
       final machine =
           Machine<Context, MyState>(currentState: paused, context: 0);
 
@@ -94,7 +89,7 @@ void main() {
       int n = 0;
       final event = Event<Context>('stp');
 
-      final paused = Paused(entry: (_) => n += 1);
+      final paused = Paused()..entry = (_) => n += 1;
       final stopped = Stopped({event: paused});
       final machine =
           Machine<Context, MyState>(currentState: stopped, context: 0);
@@ -108,7 +103,7 @@ void main() {
   group('context', () {
     test('read', () {
       int n = 0;
-      final paused = Paused(exit: (context) => n = context);
+      final paused = Paused()..exit = (context) => n = context;
       final machine =
           Machine<Context, MyState>(currentState: paused, context: 10);
 
@@ -118,7 +113,7 @@ void main() {
     });
 
     test('update on exit', () {
-      final paused = Paused(exit: (context) => context + 1);
+      final paused = Paused()..exit = (context) => context + 1;
       final machine =
           Machine<Context, MyState>(currentState: paused, context: 10);
 
@@ -130,7 +125,7 @@ void main() {
     test('update on entry', () {
       final event = Event<Context>('stp');
 
-      final paused = Paused(entry: (context) => context + 1);
+      final paused = Paused()..entry = (context) => context + 1;
       final stopped = Stopped({event: paused});
       final machine =
           Machine<Context, MyState>(currentState: stopped, context: 10);
