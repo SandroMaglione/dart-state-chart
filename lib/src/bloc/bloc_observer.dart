@@ -7,10 +7,6 @@ abstract class BlocObserver {
 
   @protected
   @mustCallSuper
-  void onCreate(BlocBase<dynamic> bloc) {}
-
-  @protected
-  @mustCallSuper
   void onEvent(Bloc<dynamic, dynamic> bloc, Object? event) {}
 
   @protected

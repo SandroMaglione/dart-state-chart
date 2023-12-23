@@ -5,7 +5,6 @@ import 'package:dart_state_chart/src/bloc/transition.dart';
 import 'package:meta/meta.dart';
 
 part 'bloc_base.dart';
-part 'bloc_overrides.dart';
 part 'emitter.dart';
 
 abstract class BlocEventSink<Event extends Object?> implements ErrorSink {

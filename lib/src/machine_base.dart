@@ -1,4 +1,7 @@
-part of 'bloc.dart';
+import 'dart:async';
+
+import '../dart_state_chart.dart';
+import './machine_observer.dart';
 
 abstract class Streamable<State extends Object?> {
   Stream<State> get stream;
@@ -24,31 +27,33 @@ abstract class ErrorSink implements Closable {
   void addError(Object error, [StackTrace? stackTrace]);
 }
 
-abstract class BlocBase<State>
-    implements StateStreamableSource<State>, Emittable<State>, ErrorSink {
-  BlocBase(this._state);
+class _DefaultMachineObserver extends MachineObserver {
+  const _DefaultMachineObserver();
+}
 
-  final _blocObserver = Bloc.observer;
+abstract class MachineBase<Context, S extends StateEvent<Context, S>>
+    implements StateStreamableSource<S>, Emittable<S>, ErrorSink {
+  MachineBase(this._state);
 
-  late final _stateController = StreamController<State>.broadcast();
+  final _machineObserver = const _DefaultMachineObserver();
 
-  State _state;
+  late final _stateController = StreamController<S>.broadcast();
+
+  S _state;
 
   bool _emitted = false;
 
   @override
-  State get state => _state;
+  S get state => _state;
 
   @override
-  Stream<State> get stream => _stateController.stream;
+  Stream<S> get stream => _stateController.stream;
 
   @override
   bool get isClosed => _stateController.isClosed;
 
-  @protected
-  @visibleForTesting
   @override
-  void emit(State state) {
+  void emit(S state) {
     try {
       if (isClosed) {
         throw StateError('Cannot emit new states after calling close');
@@ -65,23 +70,18 @@ abstract class BlocBase<State>
     }
   }
 
-  @protected
-  @mustCallSuper
   @override
   void addError(Object error, [StackTrace? stackTrace]) {
     onError(error, stackTrace ?? StackTrace.current);
   }
 
-  @protected
-  @mustCallSuper
   void onError(Object error, StackTrace stackTrace) {
-    _blocObserver.onError(this, error, stackTrace);
+    _machineObserver.onError(this, error, stackTrace);
   }
 
-  @mustCallSuper
   @override
   Future<void> close() async {
-    _blocObserver.onClose(this);
+    _machineObserver.onClose(this);
     await _stateController.close();
   }
 }
