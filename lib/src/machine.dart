@@ -3,23 +3,49 @@ import 'dart:async';
 import 'package:dart_state_chart/src/event.dart';
 import 'package:dart_state_chart/src/state.dart';
 
-class Machine<Context, S extends StateEvent<Context, S>> {
-  S currentState;
-  Context context;
+part 'emitter.dart';
+part 'machine_base.dart';
 
-  final _controller = StreamController<(S, Context)>.broadcast();
+typedef EventHandler<Event, State> = FutureOr<void> Function(
+  Event event,
+  Emitter<State> emit,
+);
 
-  Machine({required this.currentState, required this.context}) {
-    subscribe.listen((event) {
-      currentState = event.$1;
-      context = event.$2;
+typedef EventMapper<Event> = Stream<Event> Function(Event event);
+
+typedef EventTransformer<Event> = Stream<Event> Function(
+  Stream<Event> events,
+  EventMapper<Event> mapper,
+);
+
+abstract class MachineEventSink<Context, S extends StateEvent<Context, S>> {
+  void add(Event<Context, S> event);
+}
+
+abstract class Machine<Context, S extends StateEvent<Context, S>>
+    extends MachineBase<Context, S> implements MachineEventSink<Context, S> {
+  Machine(super._state, super._context, this.events) {
+    _eventController.stream.listen((event) {
+      final nextState = events.lookup(event)?.nextState(_state);
+      if (nextState != null) emit(nextState);
     });
   }
 
-  Future<void> transition(Event<Context> event) async =>
-      _controller.sink.addStream(
-        currentState.next(event, currentState, context),
-      );
+  Set<Event<Context, S>> events;
 
-  Stream<(S, Context)> get subscribe => _controller.stream;
+  final _eventController = StreamController<Event<Context, S>>.broadcast();
+  final _subscriptions = <StreamSubscription<dynamic>>[];
+
+  @override
+  void add(Event<Context, S> event) {
+    _eventController.add(event);
+  }
+
+  @override
+  Future<void> close() async {
+    await _eventController.close();
+
+    await Future.wait<void>(_subscriptions.map((s) => s.cancel()));
+    return super.close();
+  }
 }

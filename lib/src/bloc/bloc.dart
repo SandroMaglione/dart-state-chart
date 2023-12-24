@@ -1,13 +1,9 @@
 import 'dart:async';
 
-import 'package:dart_state_chart/src/bloc/bloc_observer.dart';
-import 'package:dart_state_chart/src/bloc/transition.dart';
-import 'package:meta/meta.dart';
-
 part 'bloc_base.dart';
 part 'emitter.dart';
 
-abstract class BlocEventSink<Event extends Object?> implements ErrorSink {
+abstract class BlocEventSink<Event extends Object?> {
   void add(Event event);
 }
 
@@ -26,8 +22,6 @@ typedef EventTransformer<Event> = Stream<Event> Function(
 abstract class Bloc<Event, State> extends BlocBase<State>
     implements BlocEventSink<Event> {
   Bloc(super.initialState);
-
-  static BlocObserver observer = const _DefaultBlocObserver();
 
   static EventTransformer<dynamic> transformer = (events, mapper) {
     return events
@@ -56,24 +50,8 @@ abstract class Bloc<Event, State> extends BlocBase<State>
       return true;
     }());
 
-    try {
-      onEvent(event);
-      _eventController.add(event);
-    } catch (error, stackTrace) {
-      onError(error, stackTrace);
-      rethrow;
-    }
+    _eventController.add(event);
   }
-
-  @protected
-  @mustCallSuper
-  void onEvent(Event event) {
-    _blocObserver.onEvent(this, event);
-  }
-
-  @visibleForTesting
-  @override
-  void emit(State state) => super.emit(state);
 
   void on<E extends Event>(
     EventHandler<E, State> handler, {
@@ -92,18 +70,15 @@ abstract class Bloc<Event, State> extends BlocBase<State>
     }());
 
     final subscription = (transformer ?? _eventTransformer)(
+      /// User sends event using `add`
+      ///
+      /// This below reacts to the `_eventController` based on the type of event `E`
       _eventController.stream.where((event) => event is E).cast<E>(),
       (dynamic event) {
         void onEmit(State state) {
           if (isClosed) return;
           if (this.state == state && _emitted) return;
-          onTransition(
-            Transition(
-              currentState: this.state,
-              event: event as E,
-              nextState: state,
-            ),
-          );
+
           emit(state);
         }
 
@@ -120,15 +95,9 @@ abstract class Bloc<Event, State> extends BlocBase<State>
             if (!controller.isClosed) controller.close();
           }
 
-          try {
-            _emitters.add(emitter);
-            await handler(event as E, emitter);
-          } catch (error, stackTrace) {
-            onError(error, stackTrace);
-            rethrow;
-          } finally {
-            onDone();
-          }
+          _emitters.add(emitter);
+          await handler(event as E, emitter);
+          onDone();
         }
 
         handleEvent();
@@ -138,13 +107,6 @@ abstract class Bloc<Event, State> extends BlocBase<State>
     _subscriptions.add(subscription);
   }
 
-  @protected
-  @mustCallSuper
-  void onTransition(Transition<Event, State> transition) {
-    _blocObserver.onTransition(this, transition);
-  }
-
-  @mustCallSuper
   @override
   Future<void> close() async {
     await _eventController.close();
@@ -161,10 +123,6 @@ class _Handler {
   const _Handler({required this.isType, required this.type});
   final bool Function(dynamic value) isType;
   final Type type;
-}
-
-class _DefaultBlocObserver extends BlocObserver {
-  const _DefaultBlocObserver();
 }
 
 class _FlatMapStreamTransformer<T> extends StreamTransformerBase<Stream<T>, T> {

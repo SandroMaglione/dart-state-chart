@@ -1,7 +1,4 @@
-import 'dart:async';
-
-import '../dart_state_chart.dart';
-import './machine_observer.dart';
+part of 'machine.dart';
 
 abstract class Streamable<State extends Object?> {
   Stream<State> get stream;
@@ -23,28 +20,21 @@ abstract class Emittable<State extends Object?> {
   void emit(State state);
 }
 
-abstract class ErrorSink implements Closable {
-  void addError(Object error, [StackTrace? stackTrace]);
-}
-
-class _DefaultMachineObserver extends MachineObserver {
-  const _DefaultMachineObserver();
-}
-
 abstract class MachineBase<Context, S extends StateEvent<Context, S>>
-    implements StateStreamableSource<S>, Emittable<S>, ErrorSink {
-  MachineBase(this._state);
-
-  final _machineObserver = const _DefaultMachineObserver();
+    implements StateStreamableSource<S>, Emittable<S> {
+  MachineBase(this._state, this._context);
 
   late final _stateController = StreamController<S>.broadcast();
 
   S _state;
+  Context _context;
 
   bool _emitted = false;
 
   @override
   S get state => _state;
+
+  Context get context => _context;
 
   @override
   Stream<S> get stream => _stateController.stream;
@@ -54,34 +44,28 @@ abstract class MachineBase<Context, S extends StateEvent<Context, S>>
 
   @override
   void emit(S state) {
-    try {
-      if (isClosed) {
-        throw StateError('Cannot emit new states after calling close');
-      }
-
-      if (state == _state && _emitted) return;
-
-      _state = state;
-      _stateController.add(_state);
-      _emitted = true;
-    } catch (error, stackTrace) {
-      onError(error, stackTrace);
-      rethrow;
+    if (isClosed) {
+      throw StateError('Cannot emit new states after calling close');
     }
-  }
 
-  @override
-  void addError(Object error, [StackTrace? stackTrace]) {
-    onError(error, stackTrace ?? StackTrace.current);
-  }
+    if (state == _state && _emitted) return;
 
-  void onError(Object error, StackTrace stackTrace) {
-    _machineObserver.onError(this, error, stackTrace);
+    final exitContext = _state.onExit(context) ?? _context;
+    _context = exitContext;
+
+    final entryContext = state.onEntry(exitContext) ?? exitContext;
+    _context = entryContext;
+
+    /// Keep track of current state by updating `_state`...
+    _state = state;
+
+    /// ...while also emitting `_state` to listeners
+    _stateController.add(_state);
+    _emitted = true;
   }
 
   @override
   Future<void> close() async {
-    _machineObserver.onClose(this);
     await _stateController.close();
   }
 }
