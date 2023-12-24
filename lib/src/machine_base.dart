@@ -16,18 +16,20 @@ abstract class Closable {
 abstract class StateStreamableSource<State>
     implements StateStreamable<State>, Closable {}
 
-abstract class Emittable<State extends Object?> {
-  void emit(State state);
+abstract class Emittable<Context> {
+  void emit(Event<Context> event);
 }
 
 abstract class MachineBase<Context, S extends StateEvent<Context, S>>
-    implements StateStreamableSource<S>, Emittable<S> {
-  MachineBase(this._state, this._context);
+    implements StateStreamableSource<S>, Emittable<Context> {
+  MachineBase(this._state, this._context, this.events);
 
   late final _stateController = StreamController<S>.broadcast();
 
   S _state;
   Context _context;
+
+  final Map<S, Map<Event<Context>, S>> events;
 
   bool _emitted = false;
 
@@ -43,24 +45,22 @@ abstract class MachineBase<Context, S extends StateEvent<Context, S>>
   bool get isClosed => _stateController.isClosed;
 
   @override
-  void emit(S state) {
+  void emit(Event<Context> event) {
     if (isClosed) {
       throw StateError('Cannot emit new states after calling close');
     }
+    final nextState = events[_state]?[event];
 
-    if (state == _state && _emitted) return;
+    if (nextState == null || (nextState == _state && _emitted)) return;
 
     final exitContext = _state.onExit(context) ?? _context;
     _context = exitContext;
 
-    final entryContext = state.onEntry(exitContext) ?? exitContext;
+    final entryContext = nextState.onEntry(exitContext) ?? exitContext;
     _context = entryContext;
 
-    /// Keep track of current state by updating `_state`...
-    _state = state;
-
-    /// ...while also emitting `_state` to listeners
-    _stateController.add(_state);
+    _stateController.add(nextState);
+    _state = nextState;
     _emitted = true;
   }
 

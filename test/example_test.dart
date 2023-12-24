@@ -3,23 +3,9 @@ import 'package:equatable/equatable.dart';
 import 'package:test/test.dart';
 
 abstract class EventCollection {
-  static final yellow = Event<int, SemaphoreState>(
-    'yellow',
-    Green(),
-    Yellow(),
-  );
-
-  static final red = Event<int, SemaphoreState>(
-    'red',
-    Yellow(),
-    Red(),
-  );
-
-  static final green = Event<int, SemaphoreState>(
-    'green',
-    Red(),
-    Green(),
-  );
+  static final yellow = Event<int>('yellow');
+  static final red = Event<int>('red');
+  static final green = Event<int>('green');
 }
 
 sealed class SemaphoreState extends StateEvent<int, SemaphoreState>
@@ -37,27 +23,33 @@ class Red extends SemaphoreState {}
 class SemaphoreMachine extends Machine<int, SemaphoreState> {
   SemaphoreMachine()
       : super(Green(), 10, {
-          EventCollection.yellow,
+          Green(): {
+            EventCollection.yellow: Yellow(),
+          },
+          Yellow(): {
+            EventCollection.red: Red(),
+          },
+          Red(): {
+            EventCollection.green: Green(),
+          },
         });
 }
 
 void main() {
   group('Machine', () {
-    test('Yellow -> Red -> Green', () {
+    test('Yellow -> Red -> Green', () async {
       final semaphoreMachine = SemaphoreMachine();
+      final states = <SemaphoreState>[];
+      final subscription = semaphoreMachine.stream.listen(states.add);
 
-      expectLater(
-        semaphoreMachine.stream,
-        emitsInOrder([Yellow(), Red(), Green(), emitsDone]),
-      ).then((_) {
-        expect(semaphoreMachine.state, Green());
-      });
+      semaphoreMachine.emit(EventCollection.yellow);
+      semaphoreMachine.emit(EventCollection.red);
+      semaphoreMachine.emit(EventCollection.green);
 
-      semaphoreMachine
-        ..add(EventCollection.yellow)
-        ..add(EventCollection.red)
-        ..add(EventCollection.green)
-        ..close();
+      await semaphoreMachine.close();
+      await subscription.cancel();
+
+      expect(states, [Yellow(), Red(), Green()]);
     });
   });
 }
