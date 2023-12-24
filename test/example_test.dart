@@ -5,59 +5,93 @@ import 'package:test/test.dart';
 final class SemaphoreEvent extends Event<int> {
   const SemaphoreEvent._(super.name);
 
-  static final green = SemaphoreEvent._('green');
-  static final yellow = SemaphoreEvent._('yellow');
-  static final red = SemaphoreEvent._('red');
+  static const green = SemaphoreEvent._('green');
+  static const yellow = SemaphoreEvent._('yellow');
+  static const red = SemaphoreEvent._('red');
 }
 
 final class SemaphoreEventWithAction extends Event<int> {
   const SemaphoreEventWithAction._(super.name, {super.action});
 
-  static final green = SemaphoreEventWithAction._('green');
-  static final yellow =
-      SemaphoreEventWithAction._('yellow', action: (ctx) => ctx + 1);
-  static final red = SemaphoreEventWithAction._('red');
+  static const green = SemaphoreEventWithAction._('green');
+  static const yellow = SemaphoreEventWithAction._('yellow');
+  static final red = SemaphoreEventWithAction._(
+    'red',
+    action: (ctx) => ctx + 1,
+  );
 }
 
-sealed class SemaphoreState extends StateEvent<int, SemaphoreState>
-    with EquatableMixin {
+sealed class SemaphoreState extends State<int> with EquatableMixin {
+  const SemaphoreState();
+
   @override
   List<Object?> get props => [];
 }
 
-class Green extends SemaphoreState {}
+class Green extends SemaphoreState {
+  const Green._();
+  static const state = Green._();
+}
 
-class Yellow extends SemaphoreState {}
+class Yellow extends SemaphoreState {
+  const Yellow._();
+  static const state = Yellow._();
+}
 
-class Red extends SemaphoreState {}
+class Red extends SemaphoreState {
+  const Red._();
+  static const state = Red._();
+}
+
+sealed class SemaphoreStateWithEntry extends State<int> with EquatableMixin {
+  const SemaphoreStateWithEntry();
+
+  @override
+  List<Object?> get props => [];
+}
+
+class GreenWithEntry extends SemaphoreStateWithEntry {
+  const GreenWithEntry._();
+  static const state = GreenWithEntry._();
+}
+
+class YellowWithEntry extends SemaphoreStateWithEntry {
+  const YellowWithEntry._();
+  static const state = YellowWithEntry._();
+}
+
+class RedWithEntry extends SemaphoreStateWithEntry {
+  const RedWithEntry._();
+  static const state = RedWithEntry._();
+}
 
 class SemaphoreMachine extends Machine<int, SemaphoreState, SemaphoreEvent> {
   SemaphoreMachine()
-      : super(Green(), 10, {
-          Green(): {
-            SemaphoreEvent.yellow: Yellow(),
+      : super(Green.state, 10, {
+          Green.state: {
+            SemaphoreEvent.yellow: Yellow.state,
           },
-          Yellow(): {
-            SemaphoreEvent.red: Red(),
+          Yellow.state: {
+            SemaphoreEvent.red: Red.state,
           },
-          Red(): {
-            SemaphoreEvent.green: Green(),
+          Red.state: {
+            SemaphoreEvent.green: Green.state,
           },
         });
 }
 
 class SemaphoreMachineWithActions
-    extends Machine<int, SemaphoreState, SemaphoreEventWithAction> {
+    extends Machine<int, SemaphoreStateWithEntry, SemaphoreEventWithAction> {
   SemaphoreMachineWithActions()
-      : super(Green(), 10, {
-          Green(): {
-            SemaphoreEventWithAction.yellow: Yellow(),
+      : super(GreenWithEntry.state, 10, {
+          GreenWithEntry.state: {
+            SemaphoreEventWithAction.yellow: YellowWithEntry.state,
           },
-          Yellow(): {
-            SemaphoreEventWithAction.red: Red(),
+          YellowWithEntry.state: {
+            SemaphoreEventWithAction.red: RedWithEntry.state,
           },
-          Red(): {
-            SemaphoreEventWithAction.green: Green(),
+          RedWithEntry.state: {
+            SemaphoreEventWithAction.green: GreenWithEntry.state,
           },
         });
 }
@@ -76,13 +110,29 @@ void main() {
       await semaphoreMachine.close();
       await subscription.cancel();
 
-      expect(states, [Yellow(), Red(), Green()]);
+      expect(states, [Yellow.state, Red.state, Green.state]);
       expect(semaphoreMachine.context, 10);
     });
 
-    test('Green -> Yellow -> Red -> Green (onEntry)', () async {
-      final semaphoreMachine = SemaphoreMachineWithActions();
+    test('No transition when event does not exist in current state', () async {
+      final semaphoreMachine = SemaphoreMachine();
       final states = <SemaphoreState>[];
+      final subscription = semaphoreMachine.stream.listen(states.add);
+
+      semaphoreMachine.add(SemaphoreEvent.red); // 🙅‍♂️
+      semaphoreMachine.add(SemaphoreEvent.green); // 🙅‍♂️
+      semaphoreMachine.add(SemaphoreEvent.yellow);
+
+      await semaphoreMachine.close();
+      await subscription.cancel();
+
+      expect(states, [Yellow.state]);
+      expect(semaphoreMachine.context, 10);
+    });
+
+    test('Green -> Yellow -> Red -> Green (with action)', () async {
+      final semaphoreMachine = SemaphoreMachineWithActions();
+      final states = <SemaphoreStateWithEntry>[];
       final subscription = semaphoreMachine.stream.listen(states.add);
 
       semaphoreMachine.add(SemaphoreEventWithAction.yellow);
@@ -92,7 +142,8 @@ void main() {
       await semaphoreMachine.close();
       await subscription.cancel();
 
-      expect(states, [Yellow(), Red(), Green()]);
+      expect(states,
+          [YellowWithEntry.state, RedWithEntry.state, GreenWithEntry.state]);
       expect(semaphoreMachine.context, 11);
     });
   });

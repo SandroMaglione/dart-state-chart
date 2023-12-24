@@ -1,10 +1,11 @@
 abstract class State<Context> {
-  Context? Function(Context context)? entry;
-  Context? Function(Context context)? exit;
+  const State({this.onEntry, this.onExit});
 
-  Context? onEntry(Context context) => entry?.call(context);
-  Context? onExit(Context context) => exit?.call(context);
+  final Context? Function(Context ctx)? onEntry;
+  final Context? Function(Context ctx)? onExit;
+
+  @override
+  String toString() {
+    return '''State''';
+  }
 }
-
-abstract class StateEvent<Context, S extends State<Context>>
-    extends State<Context> {}

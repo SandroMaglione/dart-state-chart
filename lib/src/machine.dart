@@ -2,7 +2,7 @@ import 'dart:async';
 
 import '../dart_state_chart.dart';
 
-abstract class Machine<Context, S extends StateEvent<Context, S>,
+abstract class Machine<Context, S extends State<Context>,
     E extends Event<Context>> {
   Machine(this._state, this._context, this._events);
 
@@ -26,7 +26,7 @@ abstract class Machine<Context, S extends StateEvent<Context, S>,
     if (nextState == null) return;
 
     /// Apply `exit` action for previous state
-    final exitContext = _state.onExit(context) ?? _context;
+    final exitContext = _state.onExit?.call(context) ?? _context;
     _context = exitContext;
 
     /// Apply `event` action
@@ -36,7 +36,7 @@ abstract class Machine<Context, S extends StateEvent<Context, S>,
     _context = actionContext;
 
     /// Apply `entry` action for upcoming state
-    final entryContext = nextState.onEntry(_context) ?? _context;
+    final entryContext = nextState.onEntry?.call(_context) ?? _context;
     _context = entryContext;
 
     _stateController.add(nextState);
