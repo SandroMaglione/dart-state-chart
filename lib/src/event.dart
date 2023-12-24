@@ -1,6 +1,8 @@
-class Event<Context> {
+typedef EventAction<Context> = Context? Function(Context ctx)?;
+
+abstract class Event<Context> {
   final String name;
-  final Context? Function(Context context)? action;
+  final EventAction<Context> action;
 
   const Event(this.name, {this.action});
 
@@ -9,11 +11,10 @@ class Event<Context> {
       identical(this, other) ||
       other is Event<Context> &&
           runtimeType == other.runtimeType &&
-          name == other.name &&
-          action == other.action;
+          name == other.name;
 
   @override
-  int get hashCode => name.hashCode ^ action.hashCode;
+  int get hashCode => name.hashCode;
 
   @override
   String toString() {

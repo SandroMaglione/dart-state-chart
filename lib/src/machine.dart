@@ -1,24 +1,49 @@
 import 'dart:async';
 
-import 'package:dart_state_chart/src/event.dart';
-import 'package:dart_state_chart/src/state.dart';
+import '../dart_state_chart.dart';
 
-part 'emitter.dart';
-part 'machine_base.dart';
+abstract class Machine<Context, S extends StateEvent<Context, S>,
+    E extends Event<Context>> {
+  Machine(this._state, this._context, this._events);
 
-typedef EventHandler<Event, State> = FutureOr<void> Function(
-  Event event,
-  Emitter<State> emit,
-);
+  final _stateController = StreamController<S>.broadcast();
+  final Map<S, Map<E, S>> _events;
 
-typedef EventMapper<Event> = Stream<Event> Function(Event event);
+  S _state;
+  Context _context;
 
-typedef EventTransformer<Event> = Stream<Event> Function(
-  Stream<Event> events,
-  EventMapper<Event> mapper,
-);
+  Context get context => _context;
+  S get state => _state;
+  Stream<S> get stream => _stateController.stream;
+  bool get isClosed => _stateController.isClosed;
 
-abstract class Machine<Context, S extends StateEvent<Context, S>>
-    extends MachineBase<Context, S> {
-  Machine(super._state, super._context, super._events);
+  void add(E event) {
+    if (isClosed) {
+      throw StateError('Cannot emit new states after calling close');
+    }
+
+    final nextState = _events[_state]?[event];
+    if (nextState == null) return;
+
+    /// Apply `exit` action for previous state
+    final exitContext = _state.onExit(context) ?? _context;
+    _context = exitContext;
+
+    /// Apply `event` action
+    final action = event.action;
+    final actionContext =
+        action != null ? (action(_context) ?? _context) : _context;
+    _context = actionContext;
+
+    /// Apply `entry` action for upcoming state
+    final entryContext = nextState.onEntry(_context) ?? _context;
+    _context = entryContext;
+
+    _stateController.add(nextState);
+    _state = nextState;
+  }
+
+  Future<void> close() async {
+    await _stateController.close();
+  }
 }
