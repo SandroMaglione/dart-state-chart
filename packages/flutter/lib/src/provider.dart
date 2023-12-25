@@ -11,16 +11,6 @@ class MachineProvider<T extends StateStreamableSource<Object?>>
     this.child,
     this.lazy = true,
   })  : _create = create,
-        _value = null,
-        super(key: key, child: child);
-
-  const MachineProvider.value({
-    required T value,
-    Key? key,
-    this.child,
-  })  : _value = value,
-        _create = null,
-        lazy = true,
         super(key: key, child: child);
 
   final Widget? child;
@@ -28,8 +18,6 @@ class MachineProvider<T extends StateStreamableSource<Object?>>
   final bool lazy;
 
   final Create<T>? _create;
-
-  final T? _value;
 
   static T of<T extends StateStreamableSource<Object?>>(
     BuildContext context, {
@@ -39,40 +27,19 @@ class MachineProvider<T extends StateStreamableSource<Object?>>
       return Provider.of<T>(context, listen: listen);
     } on ProviderNotFoundException catch (e) {
       if (e.valueType != T) rethrow;
-      throw FlutterError(
-        '''
-        MachineProvider.of() called with a context that does not contain a $T.
-        No ancestor could be found starting from the context that was passed to MachineProvider.of<$T>().
-
-        This can happen if the context you used comes from a widget above the MachineProvider.
-
-        The context used was: $context
-        ''',
-      );
+      throw FlutterError('''Context that does not contain a $T.''');
     }
   }
 
   @override
   Widget buildWithChild(BuildContext context, Widget? child) {
-    assert(
-      child != null,
-      '$runtimeType used outside of MultiMachineProvider must specify a child',
+    return InheritedProvider<T>(
+      create: _create,
+      dispose: (_, machine) => machine.close(),
+      startListening: _startListening,
+      lazy: lazy,
+      child: child,
     );
-    final value = _value;
-    return value != null
-        ? InheritedProvider<T>.value(
-            value: value,
-            startListening: _startListening,
-            lazy: lazy,
-            child: child,
-          )
-        : InheritedProvider<T>(
-            create: _create,
-            dispose: (_, bloc) => bloc.close(),
-            startListening: _startListening,
-            lazy: lazy,
-            child: child,
-          );
   }
 
   static VoidCallback _startListening(

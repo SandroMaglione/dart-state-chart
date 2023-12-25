@@ -3,83 +3,79 @@ import 'package:flutter/widgets.dart';
 import 'package:flutter_machine/src/listener.dart';
 import 'package:provider/provider.dart';
 
-typedef BlocWidgetBuilder<S> = Widget Function(BuildContext context, S state);
+typedef MachineWidgetBuilder<S> = Widget Function(
+    BuildContext context, S state);
 
-typedef BlocBuilderCondition<S> = bool Function(S previous, S current);
+typedef MachineBuilderCondition<S> = bool Function(S previous, S current);
 
-class BlocBuilder<B extends StateStreamable<S>, S>
-    extends BlocBuilderBase<B, S> {
-  const BlocBuilder({
+class MachineBuilder<M extends StateStreamable<S>, S>
+    extends MachineBuilderBase<M, S> {
+  const MachineBuilder({
     required this.builder,
     Key? key,
-    B? bloc,
-    BlocBuilderCondition<S>? buildWhen,
-  }) : super(key: key, bloc: bloc, buildWhen: buildWhen);
+    M? machine,
+    MachineBuilderCondition<S>? buildWhen,
+  }) : super(key: key, machine: machine, buildWhen: buildWhen);
 
-  final BlocWidgetBuilder<S> builder;
+  final MachineWidgetBuilder<S> builder;
 
   @override
   Widget build(BuildContext context, S state) => builder(context, state);
 }
 
-abstract class BlocBuilderBase<B extends StateStreamable<S>, S>
+abstract class MachineBuilderBase<M extends StateStreamable<S>, S>
     extends StatefulWidget {
-  const BlocBuilderBase({Key? key, this.bloc, this.buildWhen})
+  const MachineBuilderBase({Key? key, this.machine, this.buildWhen})
       : super(key: key);
 
-  final B? bloc;
+  final M? machine;
 
-  final BlocBuilderCondition<S>? buildWhen;
+  final MachineBuilderCondition<S>? buildWhen;
 
   Widget build(BuildContext context, S state);
 
   @override
-  State<BlocBuilderBase<B, S>> createState() => _BlocBuilderBaseState<B, S>();
+  State<MachineBuilderBase<M, S>> createState() =>
+      _MachineBuilderBaseState<M, S>();
 }
 
-class _BlocBuilderBaseState<B extends StateStreamable<S>, S>
-    extends State<BlocBuilderBase<B, S>> {
-  late B _bloc;
+class _MachineBuilderBaseState<M extends StateStreamable<S>, S>
+    extends State<MachineBuilderBase<M, S>> {
+  late M _machine;
   late S _state;
 
   @override
   void initState() {
     super.initState();
-    _bloc = widget.bloc ?? context.read<B>();
-    _state = _bloc.state;
+    _machine = widget.machine ?? context.read<M>();
+    _state = _machine.state;
   }
 
   @override
-  void didUpdateWidget(BlocBuilderBase<B, S> oldWidget) {
+  void didUpdateWidget(MachineBuilderBase<M, S> oldWidget) {
     super.didUpdateWidget(oldWidget);
-    final oldBloc = oldWidget.bloc ?? context.read<B>();
-    final currentBloc = widget.bloc ?? oldBloc;
+    final oldBloc = oldWidget.machine ?? context.read<M>();
+    final currentBloc = widget.machine ?? oldBloc;
     if (oldBloc != currentBloc) {
-      _bloc = currentBloc;
-      _state = _bloc.state;
+      _machine = currentBloc;
+      _state = _machine.state;
     }
   }
 
   @override
   void didChangeDependencies() {
     super.didChangeDependencies();
-    final bloc = widget.bloc ?? context.read<B>();
-    if (_bloc != bloc) {
-      _bloc = bloc;
-      _state = _bloc.state;
+    final machine = widget.machine ?? context.read<M>();
+    if (_machine != machine) {
+      _machine = machine;
+      _state = _machine.state;
     }
   }
 
   @override
   Widget build(BuildContext context) {
-    if (widget.bloc == null) {
-      // Trigger a rebuild if the bloc reference has changed.
-      // See https://github.com/felangel/bloc/issues/2127.
-      context.select<B, bool>((bloc) => identical(_bloc, bloc));
-    }
-
-    return BlocListener<B, S>(
-      bloc: _bloc,
+    return MachineListener<M, S>(
+      machine: _machine,
       listenWhen: widget.buildWhen,
       listener: (context, state) => setState(() => _state = state),
       child: widget.build(context, _state),

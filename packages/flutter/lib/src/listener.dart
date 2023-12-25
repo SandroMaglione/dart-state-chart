@@ -5,74 +5,74 @@ import 'package:flutter/widgets.dart';
 import 'package:provider/provider.dart';
 import 'package:provider/single_child_widget.dart';
 
-typedef BlocWidgetListener<S> = void Function(BuildContext context, S state);
+typedef MachineWidgetListener<S> = void Function(BuildContext context, S state);
 
-typedef BlocListenerCondition<S> = bool Function(S previous, S current);
+typedef MachineListenerCondition<S> = bool Function(S previous, S current);
 
-class BlocListener<B extends StateStreamable<S>, S>
-    extends BlocListenerBase<B, S> {
-  const BlocListener({
-    required BlocWidgetListener<S> listener,
+class MachineListener<M extends StateStreamable<S>, S>
+    extends MachineListenerBase<M, S> {
+  const MachineListener({
+    required MachineWidgetListener<S> listener,
     Key? key,
-    B? bloc,
-    BlocListenerCondition<S>? listenWhen,
+    M? machine,
+    MachineListenerCondition<S>? listenWhen,
     Widget? child,
   }) : super(
           key: key,
           child: child,
           listener: listener,
-          bloc: bloc,
+          machine: machine,
           listenWhen: listenWhen,
         );
 }
 
-abstract class BlocListenerBase<B extends StateStreamable<S>, S>
+abstract class MachineListenerBase<M extends StateStreamable<S>, S>
     extends SingleChildStatefulWidget {
-  const BlocListenerBase({
+  const MachineListenerBase({
     required this.listener,
     Key? key,
-    this.bloc,
+    this.machine,
     this.child,
     this.listenWhen,
   }) : super(key: key, child: child);
 
   final Widget? child;
 
-  final B? bloc;
+  final M? machine;
 
-  final BlocWidgetListener<S> listener;
+  final MachineWidgetListener<S> listener;
 
-  final BlocListenerCondition<S>? listenWhen;
+  final MachineListenerCondition<S>? listenWhen;
 
   @override
-  SingleChildState<BlocListenerBase<B, S>> createState() =>
-      _BlocListenerBaseState<B, S>();
+  SingleChildState<MachineListenerBase<M, S>> createState() =>
+      _MachineListenerBaseState<M, S>();
 }
 
-class _BlocListenerBaseState<B extends StateStreamable<S>, S>
-    extends SingleChildState<BlocListenerBase<B, S>> {
+class _MachineListenerBaseState<M extends StateStreamable<S>, S>
+    extends SingleChildState<MachineListenerBase<M, S>> {
   StreamSubscription<S>? _subscription;
-  late B _bloc;
+  late M _machine;
   late S _previousState;
 
   @override
   void initState() {
     super.initState();
-    _bloc = widget.bloc ?? context.read<B>();
-    _previousState = _bloc.state;
+    _machine = widget.machine ?? context.read<M>();
+    _previousState = _machine.state;
     _subscribe();
   }
 
   @override
-  void didUpdateWidget(BlocListenerBase<B, S> oldWidget) {
+  void didUpdateWidget(MachineListenerBase<M, S> oldWidget) {
     super.didUpdateWidget(oldWidget);
-    final oldBloc = oldWidget.bloc ?? context.read<B>();
-    final currentBloc = widget.bloc ?? oldBloc;
+    final oldBloc = oldWidget.machine ?? context.read<M>();
+    final currentBloc = widget.machine ?? oldBloc;
     if (oldBloc != currentBloc) {
       if (_subscription != null) {
         _unsubscribe();
-        _bloc = currentBloc;
-        _previousState = _bloc.state;
+        _machine = currentBloc;
+        _previousState = _machine.state;
       }
       _subscribe();
     }
@@ -81,12 +81,12 @@ class _BlocListenerBaseState<B extends StateStreamable<S>, S>
   @override
   void didChangeDependencies() {
     super.didChangeDependencies();
-    final bloc = widget.bloc ?? context.read<B>();
-    if (_bloc != bloc) {
+    final bloc = widget.machine ?? context.read<M>();
+    if (_machine != bloc) {
       if (_subscription != null) {
         _unsubscribe();
-        _bloc = bloc;
-        _previousState = _bloc.state;
+        _machine = bloc;
+        _previousState = _machine.state;
       }
       _subscribe();
     }
@@ -94,15 +94,6 @@ class _BlocListenerBaseState<B extends StateStreamable<S>, S>
 
   @override
   Widget buildWithChild(BuildContext context, Widget? child) {
-    assert(
-      child != null,
-      '''${widget.runtimeType} used outside of MultiBlocListener must specify a child''',
-    );
-    if (widget.bloc == null) {
-      // Trigger a rebuild if the bloc reference has changed.
-      // See https://github.com/felangel/bloc/issues/2127.
-      context.select<B, bool>((bloc) => identical(_bloc, bloc));
-    }
     return child!;
   }
 
@@ -113,7 +104,7 @@ class _BlocListenerBaseState<B extends StateStreamable<S>, S>
   }
 
   void _subscribe() {
-    _subscription = _bloc.stream.listen((state) {
+    _subscription = _machine.stream.listen((state) {
       if (widget.listenWhen?.call(_previousState, state) ?? true) {
         widget.listener(context, state);
       }
