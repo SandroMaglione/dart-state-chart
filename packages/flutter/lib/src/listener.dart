@@ -5,90 +5,107 @@ import 'package:flutter/widgets.dart';
 import 'package:provider/provider.dart';
 import 'package:provider/single_child_widget.dart';
 
-typedef MachineWidgetListener<S> = void Function(BuildContext context, S state);
+typedef MachineWidgetListener<Context, S extends CState<Context>> = void
+    Function(BuildContext context, Context ctx, S state);
 
-typedef MachineListenerCondition<S> = bool Function(S previous, S current);
-
-class MachineListener<M extends StateStreamable<S>, S>
-    extends MachineListenerBase<M, S> {
+class MachineListener<M extends StateStreamable<Context, S>, Context,
+    S extends CState<Context>> extends MachineListenerBase<M, Context, S> {
   const MachineListener({
-    required MachineWidgetListener<S> listener,
+    required MachineWidgetListener<Context, S> listener,
     Key? key,
     M? machine,
-    MachineListenerCondition<S>? listenWhen,
     Widget? child,
   }) : super(
           key: key,
           child: child,
           listener: listener,
           machine: machine,
-          listenWhen: listenWhen,
         );
 }
 
-abstract class MachineListenerBase<M extends StateStreamable<S>, S>
-    extends SingleChildStatefulWidget {
+abstract class MachineListenerBase<M extends StateStreamable<Context, S>,
+    Context, S extends CState<Context>> extends SingleChildStatefulWidget {
   const MachineListenerBase({
     required this.listener,
     Key? key,
     this.machine,
     this.child,
-    this.listenWhen,
   }) : super(key: key, child: child);
 
   final Widget? child;
 
   final M? machine;
 
-  final MachineWidgetListener<S> listener;
-
-  final MachineListenerCondition<S>? listenWhen;
+  final MachineWidgetListener<Context, S> listener;
 
   @override
-  SingleChildState<MachineListenerBase<M, S>> createState() =>
-      _MachineListenerBaseState<M, S>();
+  SingleChildState<MachineListenerBase<M, Context, S>> createState() =>
+      _MachineListenerBaseState<M, Context, S>();
 }
 
-class _MachineListenerBaseState<M extends StateStreamable<S>, S>
-    extends SingleChildState<MachineListenerBase<M, S>> {
-  StreamSubscription<S>? _subscription;
+class _MachineListenerBaseState<M extends StateStreamable<Context, S>, Context,
+        S extends CState<Context>>
+    extends SingleChildState<MachineListenerBase<M, Context, S>> {
+  StreamSubscription<S>? _subscriptionState;
+  StreamSubscription<Context>? _subscriptionContext;
+
   late M _machine;
   late S _previousState;
+  late Context _previousContext;
 
   @override
   void initState() {
     super.initState();
     _machine = widget.machine ?? context.read<M>();
     _previousState = _machine.state;
-    _subscribe();
+    _previousContext = _machine.context;
+    _subscribeState();
+    _subscribeContext();
   }
 
   @override
-  void didUpdateWidget(MachineListenerBase<M, S> oldWidget) {
+  void didUpdateWidget(MachineListenerBase<M, Context, S> oldWidget) {
     super.didUpdateWidget(oldWidget);
-    final oldBloc = oldWidget.machine ?? context.read<M>();
-    final currentBloc = widget.machine ?? oldBloc;
-    if (oldBloc != currentBloc) {
-      if (_subscription != null) {
-        _unsubscribe();
-        _machine = currentBloc;
+    final oldMachine = oldWidget.machine ?? context.read<M>();
+    final currentMachine = widget.machine ?? oldMachine;
+
+    if (oldMachine != currentMachine) {
+      if (_subscriptionState != null) {
+        _unsubscribeState();
+        _machine = currentMachine;
         _previousState = _machine.state;
       }
-      _subscribe();
+
+      if (_subscriptionContext != null) {
+        _unsubscribeContext();
+        _machine = currentMachine;
+        _previousContext = _machine.context;
+      }
+
+      _subscribeContext();
+      _subscribeState();
     }
   }
 
   @override
   void didChangeDependencies() {
     super.didChangeDependencies();
-    final bloc = widget.machine ?? context.read<M>();
-    if (_machine != bloc) {
-      if (_subscription != null) {
-        _unsubscribe();
-        _machine = bloc;
+    final machine = widget.machine ?? context.read<M>();
+    if (_machine != machine) {
+      if (_subscriptionState != null) {
+        _unsubscribeState();
+        _machine = machine;
         _previousState = _machine.state;
       }
-      _subscribe();
+
+      if (_subscriptionContext != null) {
+        _unsubscribeContext();
+        _machine = machine;
+        _previousContext = _machine.context;
+      }
+
+      _subscribeContext();
+      _subscribeState();
     }
   }
 
@@ -99,21 +116,31 @@ class _MachineListenerBaseState<M extends StateStreamable<S>, S>
 
   @override
   void dispose() {
-    _unsubscribe();
+    _unsubscribeState();
     super.dispose();
   }
 
-  void _subscribe() {
-    _subscription = _machine.stream.listen((state) {
-      if (widget.listenWhen?.call(_previousState, state) ?? true) {
-        widget.listener(context, state);
-      }
+  void _subscribeState() {
+    _subscriptionState = _machine.streamState.listen((state) {
+      widget.listener(context, _previousContext, state);
       _previousState = state;
     });
   }
 
-  void _unsubscribe() {
-    _subscription?.cancel();
-    _subscription = null;
+  void _unsubscribeState() {
+    _subscriptionState?.cancel();
+    _subscriptionState = null;
+  }
+
+  void _subscribeContext() {
+    _subscriptionContext = _machine.streamContext.listen((newContext) {
+      widget.listener(context, newContext, _previousState);
+      _previousContext = newContext;
+    });
+  }
+
+  void _unsubscribeContext() {
+    _subscriptionContext?.cancel();
+    _subscriptionContext = null;
   }
 }

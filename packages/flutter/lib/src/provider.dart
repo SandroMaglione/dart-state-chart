@@ -3,7 +3,7 @@ import 'package:flutter/widgets.dart';
 import 'package:provider/provider.dart';
 import 'package:provider/single_child_widget.dart';
 
-class MachineProvider<T extends StateStreamableSource<Object?>>
+class MachineProvider<T extends StateStreamableSource<Object?, Object?>>
     extends SingleChildStatelessWidget {
   const MachineProvider({
     required Create<T> create,
@@ -19,7 +19,7 @@ class MachineProvider<T extends StateStreamableSource<Object?>>
 
   final Create<T>? _create;
 
-  static T of<T extends StateStreamableSource<Object?>>(
+  static T of<T extends StateStreamableSource<Object?, Object?>>(
     BuildContext context, {
     bool listen = false,
   }) {
@@ -43,12 +43,18 @@ class MachineProvider<T extends StateStreamableSource<Object?>>
   }
 
   static VoidCallback _startListening(
-    InheritedContext<StateStreamable<dynamic>?> e,
-    StateStreamable<dynamic> value,
+    InheritedContext<StateStreamable<dynamic, dynamic>?> e,
+    StateStreamable<dynamic, dynamic> value,
   ) {
-    final subscription = value.stream.listen(
+    final subscriptionState = value.streamState.listen(
       (dynamic _) => e.markNeedsNotifyDependents(),
     );
-    return subscription.cancel;
+    final subscriptionContext = value.streamContext.listen(
+      (dynamic _) => e.markNeedsNotifyDependents(),
+    );
+    return () {
+      subscriptionState.cancel();
+      subscriptionContext.cancel();
+    };
   }
 }

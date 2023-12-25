@@ -20,34 +20,28 @@ class MyApp extends StatelessWidget {
       home: Scaffold(
         body: MachineProvider(
           create: (_) => SemaphoreMachine(),
-          child: Builder(
-            builder: (_) => Column(
+          child: MachineBuilder<SemaphoreMachine, int, SemaphoreState>(
+            builder: (context, ctx, state) => Column(
               children: [
-                MachineBuilder<SemaphoreMachine, SemaphoreState>(
-                  builder: (context, state) => Column(
-                    children: [
-                      Text("$state"),
-                      ElevatedButton(
-                        onPressed: () => context
-                            .read<SemaphoreMachine>()
-                            .add(SemaphoreEvent.green),
-                        child: const Text("To Green"),
-                      ),
-                      ElevatedButton(
-                        onPressed: () => context
-                            .read<SemaphoreMachine>()
-                            .add(SemaphoreEvent.yellow),
-                        child: const Text("To Yellow"),
-                      ),
-                      ElevatedButton(
-                        onPressed: () => context
-                            .read<SemaphoreMachine>()
-                            .add(SemaphoreEvent.red),
-                        child: const Text("To Red"),
-                      ),
-                    ],
-                  ),
-                )
+                Text("State: $state"),
+                Text("Context: $ctx"),
+                ElevatedButton(
+                  onPressed: () => context
+                      .read<SemaphoreMachine>()
+                      .add(SemaphoreEvent.green),
+                  child: const Text("To Green"),
+                ),
+                ElevatedButton(
+                  onPressed: () => context
+                      .read<SemaphoreMachine>()
+                      .add(SemaphoreEvent.yellow),
+                  child: const Text("To Yellow"),
+                ),
+                ElevatedButton(
+                  onPressed: () =>
+                      context.read<SemaphoreMachine>().add(SemaphoreEvent.red),
+                  child: const Text("To Red"),
+                ),
               ],
             ),
           ),

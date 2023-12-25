@@ -2,19 +2,11 @@ import 'package:dart_state_chart/dart_state_chart.dart';
 import 'package:equatable/equatable.dart';
 
 final class SemaphoreEvent extends Event<int> {
-  const SemaphoreEvent._(super.name);
+  const SemaphoreEvent._(super.name, {super.action});
 
   static const green = SemaphoreEvent._('green');
   static const yellow = SemaphoreEvent._('yellow');
-  static const red = SemaphoreEvent._('red');
-}
-
-final class SemaphoreEventWithAction extends Event<int> {
-  const SemaphoreEventWithAction._(super.name, {super.action});
-
-  static const green = SemaphoreEventWithAction._('green');
-  static const yellow = SemaphoreEventWithAction._('yellow');
-  static final red = SemaphoreEventWithAction._(
+  static final red = SemaphoreEvent._(
     'red',
     action: (ctx) => ctx + 1,
   );

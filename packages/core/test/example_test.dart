@@ -101,7 +101,7 @@ void main() {
     test('Green -> Yellow -> Red -> Green (no context change)', () async {
       final semaphoreMachine = SemaphoreMachine();
       final states = <SemaphoreState>[];
-      final subscription = semaphoreMachine.stream.listen(states.add);
+      final subscription = semaphoreMachine.streamState.listen(states.add);
 
       semaphoreMachine.add(SemaphoreEvent.yellow);
       semaphoreMachine.add(SemaphoreEvent.red);
@@ -117,7 +117,7 @@ void main() {
     test('No transition when event does not exist in current state', () async {
       final semaphoreMachine = SemaphoreMachine();
       final states = <SemaphoreState>[];
-      final subscription = semaphoreMachine.stream.listen(states.add);
+      final subscription = semaphoreMachine.streamState.listen(states.add);
 
       semaphoreMachine.add(SemaphoreEvent.red); // 🙅‍♂️
       semaphoreMachine.add(SemaphoreEvent.green); // 🙅‍♂️
@@ -133,17 +133,28 @@ void main() {
     test('Green -> Yellow -> Red -> Green (with action)', () async {
       final semaphoreMachine = SemaphoreMachineWithActions();
       final states = <SemaphoreStateWithEntry>[];
-      final subscription = semaphoreMachine.stream.listen(states.add);
+      final contexts = <int>[];
+      final subscriptionS = semaphoreMachine.streamState.listen(states.add);
+      final subscriptionC = semaphoreMachine.streamContext.listen(contexts.add);
 
       semaphoreMachine.add(SemaphoreEventWithAction.yellow);
       semaphoreMachine.add(SemaphoreEventWithAction.red);
       semaphoreMachine.add(SemaphoreEventWithAction.green);
 
       await semaphoreMachine.close();
-      await subscription.cancel();
+      await subscriptionS.cancel();
+      await subscriptionC.cancel();
 
-      expect(states,
-          [YellowWithEntry.state, RedWithEntry.state, GreenWithEntry.state]);
+      expect(
+        states,
+        [YellowWithEntry.state, RedWithEntry.state, GreenWithEntry.state],
+      );
+      expect(
+        contexts,
+        [11],
+      );
+
+      expect(semaphoreMachine.state, GreenWithEntry.state);
       expect(semaphoreMachine.context, 11);
     });
   });
