@@ -21,7 +21,7 @@ final class SemaphoreEventWithAction extends Event<int> {
   );
 }
 
-sealed class SemaphoreState extends State<int> with EquatableMixin {
+sealed class SemaphoreState extends CState<int> with EquatableMixin {
   const SemaphoreState();
 
   @override
@@ -43,7 +43,7 @@ class Red extends SemaphoreState {
   static const state = Red._();
 }
 
-sealed class SemaphoreStateWithEntry extends State<int> with EquatableMixin {
+sealed class SemaphoreStateWithEntry extends CState<int> with EquatableMixin {
   const SemaphoreStateWithEntry();
 
   @override

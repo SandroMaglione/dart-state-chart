@@ -2,8 +2,24 @@ import 'dart:async';
 
 import '../dart_state_chart.dart';
 
-abstract class Machine<Context, S extends State<Context>,
-    E extends Event<Context>> {
+abstract class Streamable<State extends Object?> {
+  Stream<State> get stream;
+}
+
+abstract class StateStreamable<State> implements Streamable<State> {
+  State get state;
+}
+
+abstract class Closable {
+  FutureOr<void> close();
+  bool get isClosed;
+}
+
+abstract class StateStreamableSource<State>
+    implements StateStreamable<State>, Closable {}
+
+abstract class Machine<Context, S extends CState<Context>,
+    E extends Event<Context>> implements StateStreamableSource<S> {
   Machine(this._state, this._context, this._events);
 
   final _stateController = StreamController<S>.broadcast();
@@ -13,8 +29,14 @@ abstract class Machine<Context, S extends State<Context>,
   Context _context;
 
   Context get context => _context;
+
+  @override
   S get state => _state;
+
+  @override
   Stream<S> get stream => _stateController.stream;
+
+  @override
   bool get isClosed => _stateController.isClosed;
 
   void add(E event) {
@@ -43,6 +65,7 @@ abstract class Machine<Context, S extends State<Context>,
     _state = nextState;
   }
 
+  @override
   Future<void> close() async {
     await _stateController.close();
   }
