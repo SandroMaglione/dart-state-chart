@@ -18,4 +18,10 @@ This project is part of my weekly newsletter at [**sandromaglione.com**](https:/
 </a>
 
 ## Project structure
-**Read all the details in the full article** 🔜
+
+**Read all the details of the implementation in the full article** 👇
+
+
+<a href="https://www.sandromaglione.com/articles/how-to-implement-state-machines-and-statecharts-in-dart-and-flutter?ref=Github&utm_medium=newsletter_project&utm_term=flutter&utm_term=dart">
+    <img alt="Read the full article on my website" src="https://www.sandromaglione.com/api/image?title=How%20to%20implement%20State%20Machines%20and%20Statecharts%20in%20dart%20and%20Flutter&publishedAt=2023-12-27" target="_blank" /> 
+</a>
